@@ -21,7 +21,8 @@ const server = Bun.serve({
 		'/api/apps': async () => {
 			try {
 				const { stdout } = await execAsync('pm2 jlist');
-				const processes = JSON.parse(stdout) as {
+				const json = stdout.split('\n').at(-1)!;
+				const processes = JSON.parse(json) as {
 					name: string;
 					pm2_env?: { pm_uptime: number; restart_time: number; status: string };
 				}[];
