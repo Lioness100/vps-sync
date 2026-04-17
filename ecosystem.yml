@@ -1,0 +1,5 @@
+apps:
+  - name: 'vps-sync'
+    script: 'src/index.ts'
+    interpreter: 'bun'
+    time: true

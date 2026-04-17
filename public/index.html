@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPS Sync</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+            --accent: #111827;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 3rem 2rem;
+            -webkit-font-smoothing: antialiased;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* Combined Header and Metrics Strip */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2.5rem;
+        }
+
+        .title-lockup {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .title-lockup h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+            color: var(--text-main);
+        }
+
+
+        .inline-metrics {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .inline-metric {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .im-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .im-val {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--accent);
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .divider {
+            width: 1px;
+            height: 30px;
+            background-color: var(--border-color);
+        }
+
+        /* Perfect Table from V3 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            border-bottom: 2px solid var(--text-main);
+            padding: 0.75rem 0.5rem;
+            font-size: 0.8125rem;
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        td {
+            padding: 0.875rem 0.5rem;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 0.875rem;
+            color: var(--text-main);
+        }
+
+        tbody tr:nth-child(even) { background-color: #f9fafb; }
+        tbody tr:hover { background-color: #f3f4f6; }
+
+        .name-cell { font-weight: 500; }
+        .text-muted { color: var(--text-muted); }
+        .text-tabular { font-variant-numeric: tabular-nums; }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-dot.online { background-color: #10b981; }
+        .status-dot.offline { background-color: #ef4444; }
+
+        .status-label {
+            font-weight: 400;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+        }
+
+        a.repo-link {
+            color: inherit;
+            text-decoration: none;
+            transition: color 0.15s;
+        }
+
+        a.repo-link:hover {
+            color: #111827;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <div class="top-bar">
+            <div class="title-lockup">
+                <h1>Deployment Logs</h1>
+            </div>
+
+            <div class="inline-metrics">
+                <div class="inline-metric">
+                    <span class="im-label">Total Services</span>
+                    <span class="im-val" id="total-services">-</span>
+                </div>
+                <div class="divider"></div>
+                <div class="inline-metric">
+                    <span class="im-label">Total Online</span>
+                    <span class="im-val" id="total-online" style="color: #10b981;">-</span>
+                </div>
+                <div class="divider"></div>
+                <div class="inline-metric">
+                    <span class="im-label">Last Push</span>
+                    <span class="im-val" id="last-ping">-</span>
+                </div>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th>Repository</th>
+                    <th>Status</th>
+                    <th>Uptime</th>
+                    <th>Restarts</th>
+                </tr>
+            </thead>
+            <tbody id="app-tbody">
+                <!-- Data populated dynamically -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        function timeAgo(dateString) {
+            if (!dateString) return 'never';
+            const date = new Date(dateString);
+            const now = new Date();
+            const seconds = Math.round((now - date) / 1000);
+
+            if (seconds < 60) return seconds + 's ago';
+            if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+            if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+            if (seconds < 2592000) return Math.floor(seconds / 86400) + 'd ago';
+            return 'a while ago';
+        }
+
+        function formatUptime(uptimeMs) {
+            if (!uptimeMs || uptimeMs === 0) return '—';
+            // Start of PM2 process time to now diff
+            const now = new Date().getTime();
+            const seconds = Math.round((now - uptimeMs) / 1000);
+
+            if (seconds < 0) return '—'; // Process hasn't really started(?)
+            if (seconds < 60) return seconds + 's';
+            if (seconds < 3600) return Math.floor(seconds / 60) + 'm ' + (seconds % 60) + 's';
+            if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ' + Math.floor((seconds % 3600) / 60) + 'm';
+            return Math.floor(seconds / 86400) + 'd ' + Math.floor((seconds % 86400) / 3600) + 'h';
+        }
+
+        async function loadApps() {
+            try {
+                const res = await fetch('/api/apps');
+                if (!res.ok) throw new Error("Failed to fetch apps");
+                const apps = await res.json();
+
+                document.getElementById('total-services').innerText = apps.length;
+
+                const onlineCount = apps.filter(a => a.status === 'online').length;
+                document.getElementById('total-online').innerText = onlineCount;
+
+                let mostRecent = null;
+                apps.forEach(a => {
+                    if (a.last_push && (!mostRecent || new Date(a.last_push) > new Date(mostRecent))) {
+                        mostRecent = a.last_push;
+                    }
+                });
+                document.getElementById('last-ping').innerText = timeAgo(mostRecent);
+
+                const tbody = document.getElementById('app-tbody');
+
+                if (apps.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #6b7280; padding: 2.5rem; font-size: 0.875rem;">No repositories tracked yet.<br/>Push to a repository configured with this server's webhook URL to register it.</td></tr>`;
+                    document.getElementById('total-online').innerText = '0';
+                    return;
+                }
+
+                tbody.innerHTML = apps.map(app => {
+                    const isOnline = app.status === 'online';
+                    const statusClass = isOnline ? 'online' : 'offline';
+                    const statusText = app.status.charAt(0).toUpperCase() + app.status.slice(1);
+
+                    const repoLink = app.url
+                        ? `<a href="${app.url}" class="repo-link" target="_blank" style="display: inline-flex; align-items: center; gap: 6px;">${app.name} <svg style="width: 14px; height: 14px; color: #111827;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg></a>`
+                        : app.name;
+
+                    return `
+                        <tr>
+                            <td class="name-cell">${app.name}</td>
+                            <td class="text-muted">${repoLink}</td>
+                            <td><span class="status-label ${!isOnline ? 'text-muted' : ''}"><span class="status-dot ${statusClass}"></span>${statusText}</span></td>
+                            <td class="text-muted text-tabular">${isOnline ? formatUptime(app.uptime) : '—'}</td>
+                            <td class="text-muted text-tabular">${isOnline ? (app.restarts || 0) : '—'}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch(err) {
+                console.error(err);
+            }
+        }
+
+        loadApps();
+        setInterval(loadApps, 5000);
+    </script>
+</body>
+</html>
