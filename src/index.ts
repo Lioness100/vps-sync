@@ -65,15 +65,13 @@ const server = Bun.serve({
 
 			try {
 				const payload = JSON.parse(bodyText);
-				const { repoName, repoUrl } = payload.repository;
+				const { name, url } = payload.repository;
 
 				if (payload.ref === `refs/heads/main`) {
-					console.log(`[Received] Valid push event to ${repoName}`);
+					console.log(`[Received] Valid push event to ${name}`);
 
-					upsertRepos(repoName, repoUrl, new Date().toISOString());
-					await runDeploy(repoName).catch((error) =>
-						console.error(`Unhandled deploy error for ${repoName}:`, error)
-					);
+					upsertRepos(name, url, new Date().toISOString());
+					await runDeploy(name).catch((error) => console.error(`Unhandled deploy error for ${name}:`, error));
 
 					return Response.json({ message: 'Deploy triggered asynchronously' }, { status: 202 });
 				}
