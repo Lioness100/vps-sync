@@ -71,7 +71,7 @@ const server = Bun.serve({
 				if (payload.ref === `refs/heads/main`) {
 					console.log(`[Received] Valid push event to ${name}`);
 
-					upsertRepos(name, url, new Date().toISOString());
+					upsertRepos(name, (url as string).replace('https://api.', 'https://'), new Date().toISOString());
 					await runDeploy(name).catch((error) => console.error(`Unhandled deploy error for ${name}:`, error));
 
 					return Response.json({ message: 'Deploy triggered asynchronously' }, { status: 202 });
