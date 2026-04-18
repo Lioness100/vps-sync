@@ -29,10 +29,10 @@ const server = Bun.serve({
 
 				const repos = getAllRepos();
 
-				const fullRepos = repos.map((repo) => {
+				const fullRepos = repos.flatMap((repo) => {
 					const proc = processes.find((p: any) => p.name === repo.name);
 					const { status, pm_uptime, restart_time } = proc?.pm2_env ?? {};
-					return { ...repo, status, uptime: pm_uptime, restarts: restart_time };
+					return status ? [{ ...repo, status, uptime: pm_uptime, restarts: restart_time }] : [];
 				});
 
 				return Response.json(fullRepos);

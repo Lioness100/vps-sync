@@ -6,9 +6,6 @@ import path from 'node:path';
 
 const execAsync = promisify(exec);
 
-/**
- * Handles the actual cd -> git pull -> build/restart commands securely.
- */
 export async function runDeploy(appName: string) {
 	console.log(`[Deploy] Triggering deployment for ${appName}…`);
 

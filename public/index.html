@@ -30,7 +30,6 @@
             margin: 0 auto;
         }
 
-        /* Combined Header and Metrics Strip */
         .top-bar {
             display: flex;
             align-items: center;
@@ -85,7 +84,6 @@
             background-color: var(--border-color);
         }
 
-        /* Perfect Table from V3 */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -201,11 +199,10 @@
 
         function formatUptime(uptimeMs) {
             if (!uptimeMs || uptimeMs === 0) return '—';
-            // Start of PM2 process time to now diff
             const now = new Date().getTime();
             const seconds = Math.round((now - uptimeMs) / 1000);
 
-            if (seconds < 0) return '—'; // Process hasn't really started(?)
+            if (seconds < 0) return '—';
             if (seconds < 60) return seconds + 's';
             if (seconds < 3600) return Math.floor(seconds / 60) + 'm ' + (seconds % 60) + 's';
             if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ' + Math.floor((seconds % 3600) / 60) + 'm';
