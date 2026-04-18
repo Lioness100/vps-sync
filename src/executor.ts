@@ -19,7 +19,11 @@ export async function runDeploy(appName: string) {
 			throw new Error(`Local path '${cwd}' does not exist.`);
 		}
 
-		await execAsync(`git pull origin main && bun pm2`, { cwd });
+		const env = { ...process.env };
+		delete env.GITHUB_SECRET;
+		delete env.PORT;
+
+		await execAsync(`git pull origin main && bun pm2`, { cwd, env });
 		console.log(`[Deploy] ✅ Successfully deployed ${appName}.\n`);
 	} catch (error: any) {
 		console.error(`[Deploy] ❌ Failed to deploy ${appName}:`, error.message);
